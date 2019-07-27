@@ -1,5 +1,7 @@
 import datetime
+import re
 
+import selenium
 from bs4 import BeautifulSoup
 from django.db import models
 from django.db.models import ForeignKey
@@ -17,6 +19,7 @@ class Station(models.Model):
 
 
 class Train(models.Model):
+    number = models.CharField(max_length=10)
     departure_station = ForeignKey(
         Station,
         on_delete=models.CASCADE,
@@ -40,37 +43,26 @@ class TrainSearch:
         self.departure_station = departure_station
         self.arrival_station = arrival_station
         self.date = date
+        self._date_format = '%d.%m.%Y'
+        self._time_format = '%H:%M'
+        self._site_root = 'https://www.tutu.ru'
 
     def get_schedule(self):
-        raw_schedule = self._get_raw_page()
-        schedule = self._parse_schedule(raw_schedule)
-
-    def _get_raw_page(self) -> str:
-        date_format = '%d.%m.%Y'
-        search_root = 'https://www.tutu.ru/poezda/rasp_d.php'
+        # search_root = 'https://www.tutu.ru/poezda/rasp_d.php'
         dept_st = f'nnst1={self.departure_station.code}'
         arr_st = f'nnst2={self.arrival_station.code}'
-        dt = f'date={self.date.strftime(date_format)}'
-        search_url = f'{search_root}?{dept_st}&{arr_st}&{dt}'
+        dt = f'date={self.date.strftime(self._date_format)}'
+        search_url = f'{self._site_root}/poezda/rasp_d.php?{dept_st}&{arr_st}&{dt}'
 
-        browser = self._open_browser()
-        browser.get(search_url)
-
-        return browser.page_source
-
-    def _parse_schedule(self, raw_schedule):
-        soup = BeautifulSoup(raw_schedule, 'html.parser')
-        schedule_cards = soup.find_all(
-            'div', {'class': 'b-train__schedule__train_card'}
-        )
+        raw_schedule = self._get_raw_page(search_url)
+        schedule = self._parse_schedule(raw_schedule)
 
         print()
 
     @staticmethod
-    def _open_browser() -> WebDriver:
-
+    def _get_raw_page(url) -> str:
         opt = Options()
-        # opt.headless = True
+        opt.headless = True
 
         profile = FirefoxProfile()
         profile.set_preference("permissions.default.image", 2)
@@ -81,7 +73,92 @@ class TrainSearch:
             firefox_profile=profile,
         )
 
-        return browser
+        browser.get(url)
 
+        return browser.page_source
 
+    @staticmethod
+    def _get_page_soup(page):
+        soup = BeautifulSoup(page, 'html.parser')
 
+        return soup
+
+    def _parse_schedule(self, raw_schedule):
+        soup = self._get_page_soup(raw_schedule)
+        schedule_cards = soup.find_all(
+            'div', {'class': 'b-train__schedule__train_card'}
+        )
+
+        schedule = [
+            self._parse_schedule_card(schedule_card)
+            for schedule_card
+            in schedule_cards
+        ]
+
+        return schedule
+
+    def _parse_schedule_card(self, card) -> dict:
+        train_number = card.find(
+            'span', {'train_number_link'}
+        ).find('span').text
+
+        departure_time = self._parse_time(
+            card.find('div', {'departure_time'}).text
+        )
+
+        arrival_time = self._parse_time(
+            card.find('span', {'schedule_time'}).text
+        )
+
+        try:
+            seats_element = card.find('span', {'seats_count'})
+            seats_count = int(seats_element.text)
+
+            seats_link = card.find(
+                'a', {'top_bottom_prices_wrapper__link'}
+            )['href']
+            seats_url = f'{self._site_root}{seats_link}'
+
+            seats_by_class = self._dispose_seats_by_class(seats_url)
+            # TODO enter seats link and dispose seats by class
+        except AttributeError:
+            seats_count = None
+
+        schedule_card_data = {
+            'train_number': train_number,
+            'departure_time': departure_time,
+            'arrival_time': arrival_time,
+            'seats': {
+                'count': seats_count,
+            },
+        }
+
+        return schedule_card_data
+
+    def _dispose_seats_by_class(self, url):
+        raw_page = self._get_raw_page(url)
+        soup = self._get_page_soup(raw_page)
+
+        seat_cards = soup.find_all('div', {'category_select_row_wrp'})
+
+        seats_by_class = {}
+        for card in seat_cards:
+            seats_class = card.find(
+                'span', {'data-ti': 'srv_class'}
+            ).findChild().text.strip()[1:-1]
+
+            raw_seats_left = card.find(
+                'div', {'data-ti': 'category_select_seats_all'}
+            ).findChild().text
+
+            seats_left = int(re.search('^(\\d+).*$', raw_seats_left).group(1))
+
+            seats_by_class[seats_class] = seats_left
+
+        return seats_by_class
+
+    def _parse_time(self, time):
+        return datetime.datetime.strptime(
+            f'{self.date.day}.{str(self.date.month).zfill(2)}.{self.date.year}T{time}',
+            f'{self._date_format}T{self._time_format}',
+        )

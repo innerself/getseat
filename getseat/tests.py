@@ -20,7 +20,7 @@ class TrainSearchTests(TestCase):
         )
 
     def tearDown(self) -> None:
-        
+        pass
 
     def test_get_raw_page(self):
         search = TrainSearch(
@@ -46,9 +46,10 @@ class TrainSearchTests(TestCase):
         search = TrainSearch(
             departure_station=Station.objects.get(pk=1),
             arrival_station=Station.objects.get(pk=2),
-            date=datetime.date(2019, 7, 12),
+            date=datetime.date(2019, 8, 1),
         )
 
-        raw_page = search._get_raw_page()
-        schedule = search._parse_schedule(raw_schedule=raw_page)
+        # raw_page = search._get_raw_page()
+        # schedule = search._parse_schedule(raw_schedule=raw_page)
+        schedule = search.get_schedule()
 

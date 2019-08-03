@@ -46,7 +46,6 @@ class TrainSearch:
         self._site_root = 'https://www.tutu.ru'
 
     def get_schedule(self):
-        # search_root = 'https://www.tutu.ru/poezda/rasp_d.php'
         dept_st = f'nnst1={self.departure_station.code}'
         arr_st = f'nnst2={self.arrival_station.code}'
         dt = f'date={self.date.strftime(self._date_format)}'
@@ -55,10 +54,10 @@ class TrainSearch:
         raw_schedule = self._get_raw_page(search_url)
         schedule = self._parse_schedule(raw_schedule)
 
-        print()
+        return schedule
 
     @staticmethod
-    def _get_raw_page(url) -> str:
+    def _get_raw_page(url: str) -> str:
         with Browser() as browser:
             raw_page = browser.page_source(url)
 
@@ -96,31 +95,25 @@ class TrainSearch:
         )
 
         try:
-            seats_element = card.find('span', {'seats_count'})
-            seats_count = int(seats_element.text)
-
             seats_link = card.find(
                 'a', {'top_bottom_prices_wrapper__link'}
             )['href']
             seats_url = f'{self._site_root}{seats_link}'
 
-            seats_by_class = self._dispose_seats_by_class(seats_url)
-            # TODO enter seats link and dispose seats by class
+            seats = self._dispose_seats_by_class(seats_url)
         except AttributeError:
-            seats_count = None
+            seats = None
 
         schedule_card_data = {
             'train_number': train_number,
             'departure_time': departure_time,
             'arrival_time': arrival_time,
-            'seats': {
-                'count': seats_count,
-            },
+            'seats': seats,
         }
 
         return schedule_card_data
 
-    def _dispose_seats_by_class(self, url):
+    def _dispose_seats_by_class(self, url: str) -> dict:
         raw_page = self._get_raw_page(url)
         soup = self._get_page_soup(raw_page)
 
@@ -136,13 +129,13 @@ class TrainSearch:
                 'div', {'data-ti': 'category_select_seats_all'}
             ).findChild().text
 
-            seats_left = int(re.search('^(\\d+).*$', raw_seats_left).group(1))
+            seats_left = int(re.search(r'^(\d+).*$', raw_seats_left).group(1))
 
             seats_by_class[seats_class] = seats_left
 
         return seats_by_class
 
-    def _parse_time(self, time):
+    def _parse_time(self, time: str) -> datetime:
         return datetime.datetime.strptime(
             f'{self.date.day}.{str(self.date.month).zfill(2)}.{self.date.year}T{time}',
             f'{self._date_format}T{self._time_format}',
@@ -158,6 +151,8 @@ class Browser:
 
     def __enter__(self):
         self.start()
+
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()

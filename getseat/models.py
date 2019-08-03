@@ -1,13 +1,11 @@
 import datetime
 import re
 
-import selenium
 from bs4 import BeautifulSoup
 from django.db import models
 from django.db.models import ForeignKey
 from selenium.webdriver import Firefox, FirefoxProfile
 from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.webdriver import WebDriver
 
 
 class Station(models.Model):
@@ -61,27 +59,14 @@ class TrainSearch:
 
     @staticmethod
     def _get_raw_page(url) -> str:
-        opt = Options()
-        opt.headless = True
+        with Browser() as browser:
+            raw_page = browser.page_source(url)
 
-        profile = FirefoxProfile()
-        profile.set_preference("permissions.default.image", 2)
-
-        browser = Firefox(
-            executable_path='./geckodriver',
-            options=opt,
-            firefox_profile=profile,
-        )
-
-        browser.get(url)
-
-        return browser.page_source
+        return raw_page
 
     @staticmethod
     def _get_page_soup(page):
-        soup = BeautifulSoup(page, 'html.parser')
-
-        return soup
+        return BeautifulSoup(page, 'html.parser')
 
     def _parse_schedule(self, raw_schedule):
         soup = self._get_page_soup(raw_schedule)
@@ -162,3 +147,49 @@ class TrainSearch:
             f'{self.date.day}.{str(self.date.month).zfill(2)}.{self.date.year}T{time}',
             f'{self._date_format}T{self._time_format}',
         )
+
+
+class Browser:
+    def __init__(self):
+        self._exec_path = './geckodriver'
+        self._options = self._set_options()
+        self._profile = self._set_profile()
+        self._inner_browser = None
+
+    def __enter__(self):
+        self.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
+    @staticmethod
+    def _set_options():
+        opt = Options()
+        opt.headless = False
+
+        return opt
+
+    @staticmethod
+    def _set_profile():
+        profile = FirefoxProfile()
+        profile.set_preference("permissions.default.image", 2)
+
+        return profile
+
+    def start(self):
+        self._inner_browser = Firefox(
+            executable_path=self._exec_path,
+            options=self._options,
+            firefox_profile=self._profile,
+        )
+
+        self._inner_browser.start_client()
+        print('Browser started')
+
+    def stop(self):
+        self._inner_browser.stop_client()
+
+    def page_source(self, url):
+        self._inner_browser.get(url)
+
+        return self._inner_browser.page_source

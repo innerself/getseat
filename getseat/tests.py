@@ -40,7 +40,7 @@ class TrainSearchTests(TestCase):
         self.assertTrue('j-content s-disabled' not in search._get_raw_page())
 
     def test_open_browser(self):
-        self.assertIsInstance(TrainSearch._open_browser(), WebDriver)
+        self.assertIsInstance(TrainSearch._start_browser(), WebDriver)
 
     def test_parse_schedule(self):
         search = TrainSearch(

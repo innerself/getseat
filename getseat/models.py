@@ -16,31 +16,36 @@ class Station(models.Model):
         return self.name
 
 
-class Train(models.Model):
-    number = models.CharField(max_length=10)
+class TravelRoute(models.Model):
+    departure_date = models.DateField()
     departure_station = ForeignKey(
         Station,
         on_delete=models.CASCADE,
-        related_name='departing_trains',
+        related_name='travels_starting_here',
     )
     arrival_station = ForeignKey(
         Station,
         on_delete=models.CASCADE,
-        related_name='arriving_trains',
+        related_name='travels_ending_here',
     )
+
+
+class SeatsStatusSnapshot(models.Model):
+    snapshot_time = models.DateTimeField(auto_now_add=True)
+    train_number = models.CharField(max_length=64)
     departure_time = models.DateTimeField()
-    arrival_time = models.DateTimeField()
+    seats = models.CharField(max_length=255)
 
 
-class TrainSearch:
+class TravelRouteParser:
     def __init__(self,
                  departure_station: Station,
                  arrival_station: Station,
-                 date: datetime.date):
+                 departure_date: datetime.date):
 
         self.departure_station = departure_station
         self.arrival_station = arrival_station
-        self.date = date
+        self.departure_date = departure_date
         self._date_format = '%d.%m.%Y'
         self._time_format = '%H:%M'
         self._site_root = 'https://www.tutu.ru'
@@ -48,7 +53,7 @@ class TrainSearch:
     def get_schedule(self):
         dept_st = f'nnst1={self.departure_station.code}'
         arr_st = f'nnst2={self.arrival_station.code}'
-        dt = f'date={self.date.strftime(self._date_format)}'
+        dt = f'date={self.departure_date.strftime(self._date_format)}'
         search_url = f'{self._site_root}/poezda/rasp_d.php?{dept_st}&{arr_st}&{dt}'
 
         raw_schedule = self._get_raw_page(search_url)
@@ -137,7 +142,7 @@ class TrainSearch:
 
     def _parse_time(self, time: str) -> datetime:
         return datetime.datetime.strptime(
-            f'{self.date.day}.{str(self.date.month).zfill(2)}.{self.date.year}T{time}',
+            f'{self.departure_date.day}.{str(self.departure_date.month).zfill(2)}.{self.departure_date.year}T{time}',
             f'{self._date_format}T{self._time_format}',
         )
 
@@ -178,11 +183,8 @@ class Browser:
             firefox_profile=self._profile,
         )
 
-        self._inner_browser.start_client()
-        print('Browser started')
-
     def stop(self):
-        self._inner_browser.stop_client()
+        self._inner_browser.close()
 
     def page_source(self, url):
         self._inner_browser.get(url)

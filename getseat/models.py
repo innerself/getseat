@@ -101,7 +101,7 @@ class TrainSearch:
             seats_url = f'{self._site_root}{seats_link}'
 
             seats = self._dispose_seats_by_class(seats_url)
-        except AttributeError:
+        except (AttributeError, TypeError):
             seats = None
 
         schedule_card_data = {

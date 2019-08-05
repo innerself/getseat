@@ -2,6 +2,9 @@ import datetime
 import re
 import time
 
+from pathlib import Path
+from django.conf import settings
+
 from bs4 import BeautifulSoup
 from django.db import models
 from django.db.models import ForeignKey
@@ -160,7 +163,10 @@ class TravelRouteParser:
 
 class Browser:
     def __init__(self):
-        self._exec_path = './geckodriver'
+        self._exec_path = Path(
+            settings.BASE_DIR
+        ).joinpath('geckodriver').as_posix()
+
         self._options = self._set_options()
         self._profile = self._set_profile()
         self._inner_browser = None

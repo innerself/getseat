@@ -176,7 +176,7 @@ class Browser:
     @staticmethod
     def _set_options():
         opt = Options()
-        opt.headless = False
+        opt.headless = True
 
         return opt
 

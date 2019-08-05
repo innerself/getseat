@@ -2,6 +2,7 @@ import datetime
 import json
 
 from django.core.management import BaseCommand
+
 from getseat.models import TravelRouteParser, SeatsStatusSnapshot, TravelRoute
 
 
@@ -15,7 +16,9 @@ class Command(BaseCommand):
         routes_to_parse = TravelRoute.objects.all()
 
         for route_to_parse in routes_to_parse:
-            for time_offset in range(options['date_window_days']):
+            date_window_days = options['date_window_days'][0]
+
+            for time_offset in range(date_window_days):
                 dt = datetime.date.today() + datetime.timedelta(
                     days=time_offset
                 )

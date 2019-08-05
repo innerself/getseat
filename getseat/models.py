@@ -1,5 +1,6 @@
 import datetime
 import re
+import time
 
 from bs4 import BeautifulSoup
 from django.db import models
@@ -63,8 +64,18 @@ class TravelRouteParser:
 
     @staticmethod
     def _get_raw_page(url: str) -> str:
-        with Browser() as browser:
-            raw_page = browser.page_source(url)
+        wait_time = 2
+        captcha_string = 'Введите цифры с картинки'
+
+        while True:
+            with Browser() as browser:
+                raw_page = browser.page_source(url)
+
+            if captcha_string in raw_page:
+                time.sleep(wait_time)
+                wait_time *= 2
+            else:
+                break
 
         return raw_page
 

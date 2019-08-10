@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+
+<script src="https://www.amcharts.com/lib/4/core.js"></script>
+<script src="https://www.amcharts.com/lib/4/charts.js"></script>
+
+<script src="https://www.amcharts.com/lib/4/themes/animated.js"></script>
+<script src="https://www.amcharts.com/lib/4/themes/material.js"></script>
+
+
+<div id="test-chart" style="width: 1400px; height: 800px;"></div>
+
+<script>
+  am4core.useTheme(am4themes_animated);
+  am4core.useTheme(am4themes_material);
+
+  var chart = am4core.createFromConfig({
+    "data": [{
+      "country": "Lithuania",
+      "litres": 501.9
+    }, {
+      "country": "Czech Republic",
+      "litres": 301.9
+    }, {
+      "country": "Ireland",
+      "litres": 201.1
+    }, {
+      "country": "Germany",
+      "litres": 165.8
+    }, {
+      "country": "Australia",
+      "litres": 139.9
+    }, {
+      "country": "Austria",
+      "litres": 128.3
+    }, {
+      "country": "UK",
+      "litres": 99
+    }, {
+      "country": "Belgium",
+      "litres": 60
+    }, {
+      "country": "The Netherlands",
+      "litres": 50
+    }],
+    "xAxes": [{
+      "type": "CategoryAxis",
+      "dataFields": {
+        "category": "country",
+        "title": {
+          "text": "Countries"
+        }
+      }
+    }],
+    "yAxes": [{
+      "type": "ValueAxis",
+      "title": {
+        "text": "Litres sold (M)"
+      }
+    }],
+    "series": [{
+      "type": "ColumnSeries",
+      "dataFields": {
+        "valueY": "litres",
+        "categoryX": "country"
+      },
+      "name": "Sales",
+      "columns": {
+        "tooltipText": "Series: {name}\nCategory: {categoryX}\nЦена: {valueY}",
+        "stroke": "#161cff",
+        "fill": "#546fff"
+      }
+    }, {
+      "type": "LineSeries",
+      "stroke": "#CDA2AB",
+      "strokeWidth": 3,
+      "dataFields": {
+        "valueY": "units",
+        "categoryX": "country"
+      },
+      "name": "Units"
+    }]
+  }, "test-chart", am4charts.XYChart);
+</script>
+
+</body>
+</html>
